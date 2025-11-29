@@ -1,0 +1,98 @@
+---
+title: "Untitled"
+author: "vinotha"
+date: "2025-11-28"
+output:
+  pdf_document: default
+  html_document: default
+runtime: shiny
+---
+
+`set.seed(1)
+```{r}
+set.seed(1)
+
+lambda <- 0.1
+theta  <- 1
+t_vals <- c(10, 100, 1000, 10000)
+nsim   <- 10000
+
+simulate_S <- function(t, lambda, theta, nsim=10000) {
+  N <- rpois(nsim, lambda * t)
+  S <- numeric(nsim)
+  for (i in which(N>0)) {
+    S[i] <- sum(rexp(N[i], rate = theta))
+  }
+  return(S)
+}
+
+par(mfrow=c(2,2))
+
+for (t in t_vals) {
+  S <- simulate_S(t, lambda, theta, nsim)
+  hist(S, probability=TRUE, col="skyblue",
+       main=paste("Histogram of S(t), t =", t),
+       xlab="S(t)")
+}
+```
+
+
+```{r}
+library(shiny)
+library(ggplot2)
+
+simulate_S <- function(t, lambda, theta, nsim=10000) {
+  N <- rpois(nsim, lambda * t)
+  S <- numeric(nsim)
+  for (i in which(N > 0)) {
+    S[i] <- sum(rexp(N[i], rate = theta))
+  }
+  return(S)
+}
+
+ui <- fluidPage(
+  titlePanel("Compound Poisson Process with Exponential Jumps"),
+
+  sidebarPanel(
+    numericInput("lambda", "Arrival Rate (λ)", 0.1),
+    numericInput("theta", "Jump Rate (θ)", 1),
+    actionButton("sim", "Run Simulation")
+  ),
+
+  mainPanel(
+    plotOutput("histPlot"),
+    plotOutput("momentPlot")
+  )
+)
+
+server <- function(input, output) {
+
+  output$histPlot <- renderPlot({
+    input$sim
+    isolate({
+      S <- simulate_S(1000, input$lambda, input$theta)
+      hist(S, probability = TRUE, col="orange",
+           main="Histogram of S(t=1000)",
+           xlab="S(t)")
+    })
+  })
+
+  output$momentPlot <- renderPlot({
+    t <- seq(1,1000,length=100)
+    mean <- input$lambda * t / input$theta
+    var  <- 2 * input$lambda * t / (input$theta^2)
+
+    plot(t, mean, type="l", col="blue", lwd=2,
+         ylab="Value", xlab="Time",
+         main="Mean and Variance vs Time")
+    lines(t, var, col="red", lwd=2)
+    legend("topleft", c("Mean", "Variance"),
+           col=c("blue","red"), lwd=2)
+  })
+}
+
+shinyApp(ui, server)
+
+```
+
+```
